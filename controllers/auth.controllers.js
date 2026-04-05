@@ -3,6 +3,13 @@ import User from "../models/user.models.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { logSecurityEvent } from "../middlewares/auth.middlewares.js";
+
+const maskEmail = (email = "") => {
+    const [local = "", domain = ""] = String(email).trim().split("@");
+    if (!local || !domain) return "invalid-email";
+    return `${local.slice(0, 2)}***@${domain}`;
+};
+
 export const registerUser = async (req, res) => {
     try {
         // Implement user registration logic here
@@ -26,7 +33,7 @@ export const registerUser = async (req, res) => {
     const existingUser = await User
         .findOne({ $or: [{ email }, { username }] });
     if (existingUser) {
-        logSecurityEvent('DUPLICATE_REGISTRATION', null, `Duplicate registration attempt for email: ${email}`, req.ip);
+        logSecurityEvent('DUPLICATE_REGISTRATION', null, `Duplicate registration attempt for email: ${maskEmail(email)}`, req.ip);
         return res.status(400).json({ message: "User already exists" });
     }
     //hash the password
@@ -39,7 +46,7 @@ export const registerUser = async (req, res) => {
     });
     //save user to database
     await newUser.save();
-    logSecurityEvent('USER_REGISTERED', newUser._id, `New user registered: ${email}`, req.ip);
+    logSecurityEvent('USER_REGISTERED', newUser._id, `New user registered: ${maskEmail(email)}`, req.ip);
     //respond with success message and meanigful data userid
     res.status(201).json({ message: "User registered successfully", userId: newUser._id });   
     } catch (error) {
@@ -66,18 +73,18 @@ export const loginUser = async (req, res) => {
     //check if user exists
     const user = await User.findOne({ email });
     if (!user) {
-        logSecurityEvent('FAILED_LOGIN', null, `Login attempt with non-existent email: ${email}`, req.ip);
+        logSecurityEvent('FAILED_LOGIN', null, `Login attempt with non-existent email: ${maskEmail(email)}`, req.ip);
         return res.status(400).json({ message: "Invalid credentials" });
     }
     //compare password    
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-        logSecurityEvent('FAILED_LOGIN', user._id, `Failed password attempt for email: ${email}`, req.ip);
+        logSecurityEvent('FAILED_LOGIN', user._id, `Failed password attempt for email: ${maskEmail(email)}`, req.ip);
         return res.status(400).json({ message: "Invalid credentials" });
     }
     //generate JWT token
     const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
-    logSecurityEvent('LOGIN_SUCCESS', user._id, `User logged in: ${email}`, req.ip);
+    logSecurityEvent('LOGIN_SUCCESS', user._id, `User logged in: ${maskEmail(email)}`, req.ip);
     //respond with token in http-only cookie
     res.cookie('token', token, { httpOnly: true, secure: true, sameSite: 'strict', maxAge: 3600000 });
     res.status(200).json({ message: "Login successful" });
