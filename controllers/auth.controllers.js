@@ -1,4 +1,4 @@
-//improvement1 add try chatch block to handle errors
+//logic for user registration and login
 import User from "../models/user.models.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
