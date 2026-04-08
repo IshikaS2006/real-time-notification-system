@@ -1,6 +1,9 @@
 import express from "express";
 import { getNotifications, unreadNotifications, markAsRead } from "../controllers/notification.controllers.js";
+import { verifyJWT } from "../middlewares/auth.middlewares.js";
 const router = express.Router();
+
+router.use(verifyJWT);
 
 //GET /notifications
 router.get("/", getNotifications);
